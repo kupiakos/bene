@@ -1,14 +1,20 @@
 import copy
+from typing import List
 
+from src.link import Link
 from .sim import Sim
 
 
 class Node(object):
     def __init__(self, hostname):
         self.hostname = hostname
-        self.links = []
+        self.links = []  # type: List[Link]
+        self.recv_links = []  # type: List[Link]
         self.protocols = {}
         self.forwarding_table = {}
+
+    def __repr__(self):
+        return 'Node<%s>' % self.hostname
 
     @staticmethod
     def trace(message):
@@ -18,11 +24,13 @@ class Node(object):
 
     def add_link(self, link):
         self.links.append(link)
+        link.endpoint.recv_links.append(link)
 
     def delete_link(self, link):
         if link not in self.links:
             return
         self.links.remove(link)
+        link.endpoint.recv_links.remove(link)
 
     def get_link(self, name):
         for link in self.links:
@@ -74,7 +82,7 @@ class Node(object):
             self.deliver_packet(packet)
         else:
             # check if unicast packet is for me
-            for link in self.links:
+            for link in self.recv_links:
                 if link.address == packet.destination_address:
                     self.trace("%s received packet" % self.hostname)
                     self.deliver_packet(packet)

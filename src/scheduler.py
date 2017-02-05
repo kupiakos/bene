@@ -8,6 +8,14 @@ class Scheduler(object):
         self.count = itertools.count()
         self.scheduler = sched.scheduler(self.current_time, self.advance_time)
 
+    def __enter__(self):
+        self.reset()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.run()
+        self.reset()
+
     def reset(self):
         self.current = 0
 

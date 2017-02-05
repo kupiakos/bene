@@ -17,6 +17,10 @@ class Link(object):
         self.busy = False
         self.queue = []
 
+    def __repr__(self):
+        return 'Link<(%d) %s -> %s>' % (
+            self.address, self.startpoint.hostname, self.endpoint.hostname)
+
     @staticmethod
     def trace(message):
         Sim.trace("Link", message)
