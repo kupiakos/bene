@@ -2,3 +2,20 @@
 *.pyc
 .idea
 examples/received
+.ipynb_checkpoints
+*.synctex.gz
+*.aux
+*.log
+# Keep existing PDFs?
+# *.pdf
+*.*~*
+*.zip
+*.bbl
+*.out
+*.bcf
+*.blg
+*.run.xml
+*.toc
+.directory
+*-blx.bib
+
