@@ -26,12 +26,12 @@ def main():
 
     print('\n100 bps, 10 ms')
     with net:
-        net.reset_all_links(propagation=1/1000, bandwidth=100.)
+        net.reset_all_links(propagation=10/1000, bandwidth=100.)
         net.send_packet(0, n1, n2)
 
     print('\n1 Mbps, 10 ms')
     with net:
-        net.reset_all_links(propagation=1/1000, bandwidth=1.*10**6)
+        net.reset_all_links(propagation=10/1000, bandwidth=1.*10**6)
         for _ in range(3):
             net.send_packet(0, n1, n2)
         net.send_packet(2, n1, n2)
