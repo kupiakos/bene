@@ -1,5 +1,6 @@
 from .buffer import SendBuffer, ReceiveBuffer
 from .connection import Connection
+from .ranges import range_format, range_subtract
 from .sim import Sim
 from .tcppacket import TCPPacket
 
@@ -8,7 +9,8 @@ class TCP(Connection):
     """ A TCP connection between two hosts."""
 
     def __init__(self, transport, source_address, source_port,
-                 destination_address, destination_port, app=None, window=1000):
+                 destination_address, destination_port, app=None, window=1000,
+                 fast_retransmit=3):
         Connection.__init__(self, transport, source_address, source_port,
                             destination_address, destination_port, app)
 
@@ -28,6 +30,11 @@ class TCP(Connection):
         self.timer = None
         # timeout duration in seconds
         self.timeout = 1
+
+        # The number of duplicate ACKs to receive before we perform a fast retransmit (0 for no fast retransmit)
+        self.fast_retransmit = fast_retransmit
+        # The number of duplicate ACKs we have received in a row
+        self.duplicate_acks = 0
 
         # -- Receiver functionality
 
@@ -56,9 +63,10 @@ class TCP(Connection):
         """ Send data on the connection. Called by the application. This
             code currently sends all data immediately. """
         self.send_buffer.put(data)
-        self.trace('%s put %d bytes into buffer' % (self.node.hostname, len(data)))
         self.send_all_allowed()
-        # Sim.scheduler.add(delay=0, event='transmit', handler=self.handle_send)
+        self.trace('%s send buffer sent %d-%d, have through %d' % (
+            self.node.hostname, self.send_buffer.base_seq, self.send_buffer.next_seq, self.send_buffer.last_seq
+        ))
 
     def send_one_segment(self):
         data_len = min(self.send_buffer.available,
@@ -101,17 +109,40 @@ class TCP(Connection):
         if self.send_buffer.outstanding > 0:
             self.reset_timer()
         else:
+            self.trace('%s cancel timer' % self.node.hostname)
             self.cancel_timer()
+        if self.fast_retransmit > 0 and packet.ack_number == self.sequence:
+            self.duplicate_acks += 1
+            excess = self.duplicate_acks + 1 - self.fast_retransmit
+            if excess < 0:
+                self.trace('%s %d ACKs are duplicate' % (
+                    self.node.hostname, self.duplicate_acks
+                ))
+            if excess == 0:
+                self.retransmit(timer=False)
+            if excess >= 0:
+                return
+        else:
+            self.duplicate_acks = 0
         self.sequence = packet.ack_number
         self.send_all_allowed()
 
-    def retransmit(self, event):
+    def retransmit(self, timer=True):
         """ Retransmit data. """
-        self.timer = None
-        self.trace("%s (%d) retransmission timer fired, sequence %d" % (
-            self.node.hostname, self.source_address, self.sequence))
+        if timer:
+            self.timer = None
+            self.trace("%s (%d) retransmission timer fired, sequence %d" % (
+                self.node.hostname, self.source_address, self.sequence))
+        else:
+            self.cancel_timer()
+            self.trace('%s fast retransmit, sequence %d' % (
+                self.node.hostname, self.sequence
+            ))
         data, seq = self.send_buffer.resend(min(self.mss, self.window), True)
-        self.send_packet(data, seq)
+        if len(data) == 0:
+            self.trace('%s no data to send for retransmit' % self.node.hostname)
+        else:
+            self.send_packet(data, seq)
 
     def reset_timer(self):
         if self.timer:
@@ -136,11 +167,22 @@ class TCP(Connection):
             packet.sequence, packet.sequence + len(packet.body) - 1,
             packet.source_address))
         self.receive_buffer.put(packet.body, packet.sequence)
+        buf_ranges = self.receive_buffer.get_ranges()
+        if buf_ranges:
+            self.trace('%s receive buffer now has %s' % (
+                self.node.hostname, range_format(*buf_ranges)
+            ))
         data, seq = self.receive_buffer.get()
         if data:
-            self.trace('%s buffer has %d-%d' % (self.node.hostname, seq, seq + len(data) - 1))
             self.ack = seq + len(data)
             self.app.receive_data(data)
+        if self.receive_buffer.buffer:
+            gap_range = range(
+                self.ack,
+                self.receive_buffer.buffer[max(self.receive_buffer.buffer)].range.stop)
+            self.trace('%s receive buffer is now missing %s' % (
+                self.node.hostname, range_format(*range_subtract(gap_range, *self.receive_buffer.get_ranges()))
+            ))
         self.send_ack()
 
     def send_ack(self):
