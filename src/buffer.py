@@ -1,3 +1,6 @@
+from .ranges import range_merge
+
+
 class SendBuffer(object):
     """ Send buffer for transport protocols """
 
@@ -81,6 +84,10 @@ class Chunk(object):
         self.length = len(data)
         self.sequence = sequence
 
+    @property
+    def range(self):
+        return range(self.sequence, self.sequence + self.length)
+
     def trim(self, sequence, length):
         """ Check for overlap with a previous chunk and trim this chunk
             if needed."""
@@ -142,3 +149,6 @@ class ReceiveBuffer(object):
                 self.base_seq += chunk.length
                 del self.buffer[chunk.sequence]
         return bytes(data), start
+
+    def get_ranges(self):
+        return range_merge(chunk.range for chunk in self.buffer.values())
