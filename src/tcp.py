@@ -55,8 +55,20 @@ class TCP(Connection):
     def send(self, data):
         """ Send data on the connection. Called by the application. This
             code currently sends all data immediately. """
-        self.send_packet(data, self.sequence)
-        self.timer = Sim.scheduler.add(delay=self.timeout, event='retransmit', handler=self.retransmit)
+        self.send_buffer.put(data)
+        self.trace('Put %d bytes into buffer' % len(data))
+        self.send_all_allowed()
+        # Sim.scheduler.add(delay=0, event='transmit', handler=self.handle_send)
+
+    def send_all_allowed(self):
+        """Send all data that the current state (window) allows us to"""
+        while True:
+            data_len = min(self.send_buffer.available, self.window - self.send_buffer.outstanding, self.mss)
+            if data_len <= 0:
+                return
+            data, seq = self.send_buffer.get(data_len)
+            assert len(data) == data_len
+            self.send_packet(data, seq)
 
     def send_packet(self, data, sequence):
         packet = TCPPacket(source_address=self.source_address,
@@ -67,21 +79,35 @@ class TCP(Connection):
                            sequence=sequence, ack_number=self.ack)
 
         # send the packet
-        self.trace("%s (%d) sending TCP segment to %d for %d" % (
-            self.node.hostname, self.source_address, self.destination_address, packet.sequence))
+        self.trace("%s (%d) sending TCP segment %d-%d to %d" % (
+            self.node.hostname, self.source_address,
+            packet.sequence, sequence + len(data) - 1,
+            self.destination_address))
         self.transport.send_packet(packet)
-
-        # set a timer
         if not self.timer:
-            self.timer = Sim.scheduler.add(delay=self.timeout, event='retransmit', handler=self.retransmit)
+            self.reset_timer()
 
     def handle_ack(self, packet):
         """ Handle an incoming ACK. """
+        self.trace('%s (%d) received ACK from %d for %d' % (
+            self.node.hostname, packet.destination_address, packet.source_address, packet.ack_number
+        ))
+        self.send_buffer.slide(packet.ack_number)
         self.cancel_timer()
+        if self.send_buffer.outstanding == 0:
+            self.reset_timer()
+        self.sequence = packet.ack_number
+        self.send_all_allowed()
+
 
     def retransmit(self, event):
         """ Retransmit data. """
         self.trace("%s (%d) retransmission timer fired" % (self.node.hostname, self.source_address))
+
+    def reset_timer(self):
+        if self.timer:
+            self.cancel_timer()
+        self.timer = Sim.scheduler.add(delay=self.timeout, event='retransmit', handler=self.retransmit)
 
     def cancel_timer(self):
         """ Cancel the timer. """
@@ -96,9 +122,16 @@ class TCP(Connection):
         """ Handle incoming data. This code currently gives all data to
             the application, regardless of whether it is in order, and sends
             an ACK."""
-        self.trace("%s (%d) received TCP segment from %d for %d" % (
-            self.node.hostname, packet.destination_address, packet.source_address, packet.sequence))
-        self.app.receive_data(packet.body)
+        self.trace("%s (%d) received TCP segment %d-%d from %d" % (
+            self.node.hostname, packet.destination_address,
+            packet.sequence, packet.sequence + len(packet.body) - 1,
+            packet.source_address))
+        self.receive_buffer.put(packet.body, packet.sequence)
+        data, seq = self.receive_buffer.get()
+        if data:
+            self.trace('%s buffer has %d-%d' % (self.node.hostname, seq, seq + len(data) - 1))
+            self.ack = seq + len(data)
+            self.app.receive_data(data)
         self.send_ack()
 
     def send_ack(self):
