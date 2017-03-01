@@ -113,7 +113,7 @@ class TCP(Connection):
             self.cancel_timer()
         if self.fast_retransmit > 0 and packet.ack_number == self.sequence:
             self.duplicate_acks += 1
-            excess = self.duplicate_acks + 1 - self.fast_retransmit
+            excess = self.duplicate_acks - 1 - self.fast_retransmit
             if excess < 0:
                 self.trace('%s %d ACKs are duplicate' % (
                     self.node.hostname, self.duplicate_acks
