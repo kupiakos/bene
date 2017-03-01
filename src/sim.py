@@ -14,4 +14,4 @@ class Sim(object):
     @staticmethod
     def trace(kind, message):
         if kind in Sim.debug:
-            print(Sim.scheduler.current_time(), message, file=sys.stderr)
+            print(round(Sim.scheduler.current_time(), 5), message, file=sys.stderr)
