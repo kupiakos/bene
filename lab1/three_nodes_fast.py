@@ -2,9 +2,8 @@
 
 import sys
 sys.path.append('..')
-from src.sim import Sim
 
-from lab1.nethelper import NetHelper
+from src.nethelper import NetHelper
 from lab1.reporthandler import ReportHandler
 
 def main():

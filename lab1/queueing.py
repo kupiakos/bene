@@ -5,7 +5,7 @@ sys.path.append('..')
 
 from src.node import Node
 from src.sim import Sim
-from lab1.nethelper import NetHelper
+from src.nethelper import NetHelper
 
 class DelayHandler:
     utilization = 0
