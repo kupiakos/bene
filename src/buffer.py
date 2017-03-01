@@ -7,19 +7,23 @@ class SendBuffer(object):
             value is the sequence number for the next data that has
             not yet been sent. The last value is the sequence number
             for the last data in the buffer."""
-        self.buffer = b''
+        self.buffer = bytearray()
         self.base_seq = 0
         self.next_seq = 0
         self.last_seq = 0
 
+    @property
     def available(self):
         """ Return number of bytes available to send. This is data that
             could be sent but hasn't."""
+        assert self.last_seq >= self.next_seq
         return self.last_seq - self.next_seq
 
+    @property
     def outstanding(self):
         """ Return number of outstanding bytes. This is data that has
             been sent but not yet acked."""
+        assert self.next_seq >= self.base_seq
         return self.next_seq - self.base_seq
 
     def put(self, data):
@@ -38,7 +42,7 @@ class SendBuffer(object):
         data = self.buffer[start:start + size]
         sequence = self.next_seq
         self.next_seq = self.next_seq + size
-        return data, sequence
+        return bytes(data), sequence
 
     def resend(self, size, reset=True):
         """ Get oldest data that is outstanding, so it can be
@@ -53,7 +57,7 @@ class SendBuffer(object):
         sequence = self.base_seq
         if reset:
             self.next_seq = sequence + size
-        return data, sequence
+        return bytes(data), sequence
 
     def slide(self, sequence):
         """ Slide the receive window to the acked sequence
@@ -128,7 +132,7 @@ class ReceiveBuffer(object):
     def get(self):
         """ Get and remove all data that is in order. Return the data
             and its starting sequence number. """
-        data = b''
+        data = bytearray()
         start = self.base_seq
         for sequence in sorted(self.buffer.keys()):
             chunk = self.buffer[sequence]
@@ -137,4 +141,4 @@ class ReceiveBuffer(object):
                 data += chunk.data
                 self.base_seq += chunk.length
                 del self.buffer[chunk.sequence]
-        return data, start
+        return bytes(data), start
