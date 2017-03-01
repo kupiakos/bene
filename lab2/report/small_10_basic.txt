@@ -1,0 +1,10 @@
+0.064 n1 (2) received ACK from 1 for 9000
+0.064 n1 cannot send more data
+0.074 n2 (1) received TCP segment 9000-9999 from 2
+0.074 n2 receive buffer now has 9000-9999
+0.074 Received 1000 bytes
+0.074 n2 (1) sending TCP ACK to 2 for 10000
+0.084 n1 (2) received ACK from 1 for 10000
+0.084 n1 cancel timer
+0.084 n1 cannot send more data
+ === File transferred successfully ===
