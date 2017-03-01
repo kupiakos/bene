@@ -56,19 +56,23 @@ class TCP(Connection):
         """ Send data on the connection. Called by the application. This
             code currently sends all data immediately. """
         self.send_buffer.put(data)
-        self.trace('Put %d bytes into buffer' % len(data))
+        self.trace('%s put %d bytes into buffer' % (self.node.hostname, len(data)))
         self.send_all_allowed()
         # Sim.scheduler.add(delay=0, event='transmit', handler=self.handle_send)
 
+    def send_one_segment(self):
+        data_len = min(self.send_buffer.available,
+                       self.window - self.send_buffer.outstanding, self.mss)
+        if data_len <= 0:
+            self.trace('%s cannot send more data' % self.node.hostname)
+            return
+        data, seq = self.send_buffer.get(data_len)
+        assert len(data) == data_len
+        return self.send_packet(data, seq)
+
     def send_all_allowed(self):
         """Send all data that the current state (window) allows us to"""
-        while True:
-            data_len = min(self.send_buffer.available, self.window - self.send_buffer.outstanding, self.mss)
-            if data_len <= 0:
-                return
-            data, seq = self.send_buffer.get(data_len)
-            assert len(data) == data_len
-            self.send_packet(data, seq)
+        while self.send_one_segment() is not None: pass
 
     def send_packet(self, data, sequence):
         packet = TCPPacket(source_address=self.source_address,
@@ -86,6 +90,7 @@ class TCP(Connection):
         self.transport.send_packet(packet)
         if not self.timer:
             self.reset_timer()
+        return packet
 
     def handle_ack(self, packet):
         """ Handle an incoming ACK. """
@@ -93,16 +98,20 @@ class TCP(Connection):
             self.node.hostname, packet.destination_address, packet.source_address, packet.ack_number
         ))
         self.send_buffer.slide(packet.ack_number)
-        self.cancel_timer()
-        if self.send_buffer.outstanding == 0:
+        if self.send_buffer.outstanding > 0:
             self.reset_timer()
+        else:
+            self.cancel_timer()
         self.sequence = packet.ack_number
         self.send_all_allowed()
 
-
     def retransmit(self, event):
         """ Retransmit data. """
-        self.trace("%s (%d) retransmission timer fired" % (self.node.hostname, self.source_address))
+        self.timer = None
+        self.trace("%s (%d) retransmission timer fired, sequence %d" % (
+            self.node.hostname, self.source_address, self.sequence))
+        data, seq = self.send_buffer.resend(min(self.mss, self.window), True)
+        self.send_packet(data, seq)
 
     def reset_timer(self):
         if self.timer:

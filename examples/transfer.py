@@ -70,6 +70,7 @@ class Main(object):
         Sim.scheduler.reset()
         Sim.set_debug('AppHandler')
         Sim.set_debug('TCP')
+        Sim.set_debug('Link')
 
         # setup network
         net = NetHelper('../networks/one-hop.txt')
