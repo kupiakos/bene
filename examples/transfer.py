@@ -1,3 +1,4 @@
+
 from __future__ import print_function
 
 import sys
@@ -7,7 +8,8 @@ sys.path.append('..')
 from src.sim import Sim
 from src.transport import Transport
 from src.tcp import TCP
-from lab1.nethelper import NetHelper
+
+from networks.network import Network
 
 import optparse
 import os
@@ -41,11 +43,11 @@ class Main(object):
         parser = optparse.OptionParser(usage="%prog [options]",
                                        version="%prog 0.1")
 
-        parser.add_option("-f", "--filename", type=str, dest="filename",
+        parser.add_option("-f", "--filename", type="str", dest="filename",
                           default='test.txt',
                           help="filename to send")
 
-        parser.add_option("-l", "--loss", type=float, dest="loss",
+        parser.add_option("-l", "--loss", type="float", dest="loss",
                           default=0.0,
                           help="random loss rate")
 
@@ -69,35 +71,27 @@ class Main(object):
         Sim.scheduler.reset()
         Sim.set_debug('AppHandler')
         Sim.set_debug('TCP')
-        Sim.set_debug('Link')
 
         # setup network
-        net = NetHelper('../networks/one-hop.txt')
+        net = Network('../networks/one-hop.txt')
         net.loss(self.loss)
 
         # setup routes
         n1 = net.get_node('n1')
         n2 = net.get_node('n2')
-        net.forward_links((n1, n2))
+        n1.add_forwarding_entry(address=n2.get_address('n1'), link=n1.links[0])
+        n2.add_forwarding_entry(address=n1.get_address('n2'), link=n2.links[0])
 
         # setup transport
         t1 = Transport(n1)
         t2 = Transport(n2)
 
-        t1.drop_data(1000, 2200, 1)
-
         # setup application
         a = AppHandler(self.filename)
 
         # setup connection
-        n1_n2 = net.resolve_dest_address(n1, n2)
-        n2_n1 = net.resolve_dest_address(n2, n1)
-
-        c1 = TCP(t1, n2_n1, 1, n1_n2, 1, a, window=10000)
-        c2 = TCP(t2, n1_n2, 1, n2_n1, 1, a, window=10000)
-
-        Sim.scheduler.add(delay=.1, event='down', handler=n2.get_link('n1').down)
-        Sim.scheduler.add(delay=.5, event='down', handler=n2.get_link('n1').up)
+        c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=3000)
+        c2 = TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=3000)
 
         # send a file
         with open(self.filename, 'rb') as f:
