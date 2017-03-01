@@ -5,9 +5,9 @@ from typing import io
 sys.path.append('..')
 
 from src.sim import Sim
-from src.transport import Transport
-from src.tcp import TCP
-from src.nethelper import NetHelper
+from lab2.transport import Transport
+from lab2.nethelper import NetHelper
+from lab2.tcp import TCP
 from lab2.sniffer import PacketSniffer
 
 import argparse

@@ -1,9 +1,5 @@
-import heapq
-import math
 from collections import deque
 from typing import Tuple, Optional, List, Union
-
-import sys
 
 from networks.network import Network
 from src.link import Link
@@ -89,7 +85,7 @@ class NetHelper(Network):
                 n2.add_forwarding_entry(address=n2.get_address(n1.hostname), link=link2)
 
     @staticmethod
-    def forward_route(route: List[Link], full: bool=True):
+    def forward_route(route: List[Link], full: bool = True):
         for i, src_link in enumerate(route):
             node = src_link.startpoint
             for dest_link in (route[i:] if full else (route[-1],)):
@@ -132,13 +128,13 @@ class NetHelper(Network):
         #         n1.add_forwarding_entry(address=n2.get_address(n1.hostname), link=link)
 
     @staticmethod
-    def reset_link(link: Link, propagation: float=None, bandwidth: float=None):
+    def reset_link(link: Link, propagation: float = None, bandwidth: float = None):
         if propagation is not None:
             link.propagation = propagation
         if bandwidth is not None:
             link.bandwidth = bandwidth
 
-    def reset_all_links(self, propagation: float=None, bandwidth: float=None):
+    def reset_all_links(self, propagation: float = None, bandwidth: float = None):
         for name, node in self.nodes.items():
             for link in node.links:
                 self.reset_link(link, propagation, bandwidth)
@@ -153,7 +149,7 @@ class NetHelper(Network):
 
     def send_packet(self, delay: int,
                     src: Node, dest: Union[Node, Link, int],
-                    ident: int=None, protocol: str=None, length: int=None,
+                    ident: int = None, protocol: str = None, length: int = None,
                     **kwargs) -> Packet:
         if ident is None:
             ident = self.ident
@@ -175,7 +171,7 @@ class NetHelper(Network):
         return p
 
     def send_packet_stream(self, src: Node, dest: Union[Node, Link, int], count: int,
-                           delay: int=0, length: int=None, **kwargs):
+                           delay: int = 0, length: int = None, **kwargs):
         dest_addr = self.resolve_dest_address(src, dest)
         if dest_addr is None:
             raise Exception('Could not find a route to node!')
@@ -191,7 +187,3 @@ class NetHelper(Network):
         for _ in range(count):
             self.send_packet(delay, src, dest, length=length, **kwargs)
             delay += packet_delay
-
-
-
-

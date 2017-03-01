@@ -3,7 +3,7 @@
 import sys
 sys.path.append('..')
 
-from src.nethelper import NetHelper
+from lab2.nethelper import NetHelper
 from lab1.reporthandler import ReportHandler
 
 def main():
