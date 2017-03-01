@@ -61,10 +61,15 @@ class Network(object):
             self.nodes[name] = Node(name)
         return self.nodes[name]
 
-    def loss(self, loss) -> float:
+    def loss(self, loss):
         for node in self.nodes.values():
             for link in node.links:
                 link.loss = loss
+
+    def queue(self, size):
+        for node in self.nodes.values():
+            for link in node.links:
+                link.queue_size = size
 
     def set_bandwidth(self, link, rate):
         numeric_rate = self.convert(rate)
