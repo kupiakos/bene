@@ -56,12 +56,12 @@ class Network(object):
             if fields[i].endswith("loss"):
                 self.set_loss(l, fields[i])
 
-    def get_node(self, name):
+    def get_node(self, name) -> Node:
         if name not in self.nodes:
             self.nodes[name] = Node(name)
         return self.nodes[name]
 
-    def loss(self, loss):
+    def loss(self, loss) -> float:
         for node in self.nodes.values():
             for link in node.links:
                 link.loss = loss
