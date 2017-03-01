@@ -8,7 +8,7 @@ def main():
     windows, speeds, delays = list(zip(*(
         (int(window), float(speed) / 1e6, float(delay) * 1e6)
         for window, speed, delay in (
-            line.strip().split(',') for line in open('window_sizes.txt'))
+            line.strip().split(',') for line in open('window-sizes.txt'))
     )))
 
     plt.figure()

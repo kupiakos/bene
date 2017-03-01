@@ -1,0 +1,10 @@
+47.80562 n2 (1) sending TCP ACK to 2 for 514520
+47.80562 2 dropped packet due to random loss
+48.79482 n1 (2) retransmission timer fired, sequence 513000
+48.79482 n1 (2) sending TCP segment 513000-513999 to 1
+48.80562 n2 (1) received TCP segment 513000-513999 from 2
+48.80562 n2 (1) sending TCP ACK to 2 for 514520
+48.81562 n1 (2) received ACK from 1 for 514520
+48.81562 n1 cancel timer
+48.81562 n1 cannot send more data
+ === File transferred successfully ===
