@@ -8,8 +8,7 @@ sys.path.append('..')
 from src.sim import Sim
 from src.transport import Transport
 from src.tcp import TCP
-
-from networks.network import Network
+from lab1.nethelper import NetHelper
 
 import optparse
 import os
@@ -73,14 +72,13 @@ class Main(object):
         Sim.set_debug('TCP')
 
         # setup network
-        net = Network('../networks/one-hop.txt')
+        net = NetHelper('../networks/one-hop.txt')
         net.loss(self.loss)
 
         # setup routes
         n1 = net.get_node('n1')
         n2 = net.get_node('n2')
-        n1.add_forwarding_entry(address=n2.get_address('n1'), link=n1.links[0])
-        n2.add_forwarding_entry(address=n1.get_address('n2'), link=n2.links[0])
+        net.forward_links((n1, n2))
 
         # setup transport
         t1 = Transport(n1)
@@ -90,8 +88,11 @@ class Main(object):
         a = AppHandler(self.filename)
 
         # setup connection
-        c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=3000)
-        c2 = TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=3000)
+        n1_n2 = net.resolve_dest_address(n1, n2)
+        n2_n1 = net.resolve_dest_address(n2, n1)
+
+        c1 = TCP(t1, n2_n1, 1, n1_n2, 1, a, window=3000)
+        c2 = TCP(t2, n1_n2, 1, n2_n1, 1, a, window=3000)
 
         # send a file
         with open(self.filename, 'rb') as f:
