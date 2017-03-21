@@ -56,7 +56,7 @@ class TransferTester:
 
 class CongestionWindowPlotter(PacketSniffer):
     SequenceEntry = namedtuple('SequenceEntry', ('time', 'sequence', 'event'))
-    CongestionEntry = namedtuple('CongestionEntry', ('time', 'cwnd', 'threshold'))
+    CongestionEntry = namedtuple('CongestionEntry', ('time', 'cwnd', 'threshold', 'real_cwnd'))
 
     def __init__(self, tcp: TCP, drops: MutableSet[int]):
         super().__init__(tcp.node, 'TCP', False)
@@ -74,7 +74,9 @@ class CongestionWindowPlotter(PacketSniffer):
         self.congestion.append(self.CongestionEntry(
             Sim.scheduler.current_time(),
             self.tcp.congestion.max_outstanding,
-            getattr(self.tcp.congestion, 'threshold', None)))
+            getattr(self.tcp.congestion, 'threshold', None),
+            getattr(self.tcp.congestion, 'cwnd', None),
+        ))
 
     def intercept_sent(self, packet: TCPPacket) -> Optional[TCPPacket]:
         if packet.sequence in self.drops:
@@ -105,7 +107,7 @@ class CongestionWindowPlotter(PacketSniffer):
         print('=== Writing congestion capture to', dest_file, '===')
         with open(dest_file, 'w') as f:
             writer = csv.writer(f)
-            writer.writerow(['Time', 'Congestion Window', 'Threshold'])
+            writer.writerow(['Time', 'Effective Congestion Window', 'Threshold', 'Congestion Window'])
             writer.writerows(self.congestion)
 
 

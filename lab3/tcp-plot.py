@@ -18,15 +18,19 @@ SEQ_MOD = 60
 def cwnd(infile, outfile, title=''):
     print('Generating congestion window graph...')
     plt.figure()
-    df = pd.read_csv(infile)
+    df = pd.read_csv(infile).drop_duplicates('Time')
+    df['Effective Congestion Window'] /= MSS
     df['Congestion Window'] /= MSS
     df['Threshold'] /= MSS
     df['Time'] += 1
-    ax = df.plot(x="Time", y="Congestion Window", figsize=CWND_FIG_SIZE)
-    # df.plot(x="Time", y="Threshold", figsize=CWND_FIG_SIZE, ax=ax)
+    ax = df.plot(x='Time', y='Congestion Window', figsize=CWND_FIG_SIZE, c='#348ABD')
+    df[(df.shift() != df)['Effective Congestion Window']].plot(
+        c='#E24A33', marker='.', linestyle='None', figsize=CWND_FIG_SIZE,
+        x='Time', y='Effective Congestion Window', ax=ax, zorder=10
+    )
     # set the axes
     ax.set_xlabel('Time')
-    ax.set_ylabel('Congestion Limit (MSS)')
+    ax.set_ylabel('Congestion Window (in MSS)')
     ax.set_xlim(.9, MAX_SEC)
     plt.suptitle("")
     plt.title(title)
@@ -59,7 +63,7 @@ def sequence(infile, outfile, title=''):
     ax.set_xlim(.9, MAX_SEC)
     ax.set_ylim(-1, 60)
     ax.set_xlabel('Time')
-    ax.set_ylabel('Sequence Number')
+    ax.set_ylabel('Sequence Number (in MSS, mod 60)')
     plt.suptitle("")
     plt.title(title)
     plt.savefig(outfile, dpi=300, bbox_inches='tight')
