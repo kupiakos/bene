@@ -47,6 +47,12 @@ class SendBuffer(object):
         self.next_seq = self.next_seq + size
         return bytes(data), sequence
 
+    def skip(self, size):
+        """Ensure that the next result from get will skip at least the
+        first size bytes in the buffer."""
+        if self.next_seq < self.base_seq + size:
+            self.next_seq = self.base_seq + size
+
     def resend(self, size, reset=True):
         """ Get oldest data that is outstanding, so it can be
         resent. Return the data and the starting sequence number of
