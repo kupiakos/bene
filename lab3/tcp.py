@@ -91,7 +91,8 @@ class TCP(Connection):
             self.node.hostname, self.send_buffer.base_seq, self.send_buffer.next_seq, self.send_buffer.last_seq
         ))
 
-    def send_one_segment(self):
+    def send_one_segment(self, resend=False):
+        self.send_buffer.skip(0 if resend else self.congestion.skip_sending)
         data_len = min(self.send_buffer.available,
                        self.congestion.max_outstanding - self.send_buffer.outstanding,
                        self.window - self.send_buffer.outstanding, self.mss)
@@ -130,8 +131,9 @@ class TCP(Connection):
             self.node.hostname, packet.destination_address, packet.source_address, packet.ack_number
         ))
         acked = self.send_buffer.slide(packet.ack_number)
-        self.congestion.bytes_successful(acked)
-        if self.send_buffer.outstanding > 0:
+        if acked > 0:
+            self.congestion.send_successful(acked)
+        if self.send_buffer.outstanding > 0 or self.congestion.skip_sending > 0:
             self.reset_timer()
         else:
             self.trace('%s cancel timer' % self.node.hostname)
@@ -143,9 +145,10 @@ class TCP(Connection):
                 self.trace('%s %d ACKs are duplicate' % (
                     self.node.hostname, self.duplicate_acks
                 ))
+            if excess >= 0:
+                self.congestion.send_failed(self.send_buffer.outstanding, dup_acks=self.duplicate_acks)
             if excess == 0:
                 self.retransmit(timer=False)
-            if excess >= 0:
                 return
         else:
             self.duplicate_acks = 0
@@ -154,18 +157,18 @@ class TCP(Connection):
 
     def retransmit(self, timer=True):
         """ Retransmit data. """
-        self.congestion.bytes_failed(self.send_buffer.outstanding, fast=not timer)
         if timer:
             self.timer = None
-            self.trace("%s (%d) retransmission timer fired, sequence %d" % (
+            self.trace("%s (%d) TCP timeout fired, sequence %d" % (
                 self.node.hostname, self.source_address, self.sequence))
+            self.congestion.send_failed(self.send_buffer.outstanding)
         else:
             self.cancel_timer()
             self.trace('%s fast retransmit, sequence %d' % (
                 self.node.hostname, self.sequence
             ))
         self.send_buffer.resend(0, reset=True)
-        self.send_all_allowed()
+        self.send_one_segment(resend=True)
 
     def reset_timer(self):
         if self.timer:

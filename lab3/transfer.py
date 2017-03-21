@@ -8,7 +8,7 @@ sys.path.append('..')
 
 from src.tcppacket import TCPPacket
 from src.sim import Sim
-from lab3.congestion import TCPTahoe
+from lab3.congestion import TCPTahoe, TCPReno
 from lab3.nethelper import NetHelper
 from lab3.tcp import TCP
 from lab3.sniffer import PacketSniffer
@@ -118,6 +118,8 @@ def main():
         help='Drop the specified comma-separated sequence numbers'
     )
 
+    parser.add_argument('-r', '--reno', action='store_true', help='Use TCP Reno')
+
     args = parser.parse_args()
 
     # parameters
@@ -125,7 +127,7 @@ def main():
     Sim.set_debug('TransferTester')
     Sim.set_debug('TCP')
     Sim.set_debug('Congestion')
-    Sim.set_debug('CongestionWindowPlotter')
+    # Sim.set_debug('CongestionWindowPlotter')
     # Sim.set_debug('Link')
 
     # setup network
@@ -139,7 +141,8 @@ def main():
     # setup application
     tester = TransferTester(args.infile)
 
-    c1, c2 = TCP.connect(net, n1, n2, app=tester, congestion_control=TCPTahoe, mss=MSS, window=1e12)
+    congestion = TCPReno if args.reno else TCPTahoe
+    c1, c2 = TCP.connect(net, n1, n2, app=tester, congestion_control=congestion, mss=MSS)
     capture = CongestionWindowPlotter(tcp=c1, drops=args.drops)
 
     tester.test(c1.send)
