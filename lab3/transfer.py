@@ -112,9 +112,9 @@ class CongestionWindowPlotter(PacketSniffer):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('infile', type=str, help='file to test with')
-    parser.add_argument('sequence_file', type=str, help='the sequence CSV file')
-    parser.add_argument('cwnd_file', type=str, help='the congestion window CSV file')
+    parser.add_argument('infile', type=str, nargs='?', default='internet-architecture.pdf', help='file to test with')
+    parser.add_argument('sequence_file', type=str, nargs='?', help='the sequence CSV file')
+    parser.add_argument('cwnd_file', type=str, nargs='?', help='the congestion window CSV file')
 
     parser.add_argument(
         '-d',
@@ -154,8 +154,10 @@ def main():
     # run the simulation
     Sim.scheduler.run()
     tester.check()
-    capture.save_sequence(args.sequence_file)
-    capture.save_cwnd(args.cwnd_file)
+    if args.sequence_file:
+        capture.save_sequence(args.sequence_file)
+    if args.cwnd_file:
+        capture.save_cwnd(args.cwnd_file)
 
 
 if __name__ == '__main__':
