@@ -14,6 +14,7 @@ MSS = 1000
 SEQ_MOD = 60
 
 def cwnd(infile, outfile, title=''):
+    print('Generating congestion window graph...')
     plt.figure()
     df = pd.read_csv(infile)
     df['Congestion Window'] /= MSS
@@ -28,6 +29,7 @@ def cwnd(infile, outfile, title=''):
     plt.savefig(outfile)
 
 def sequence(infile, outfile, title=''):
+    print('Generating sequence graph...')
     plt.figure()
     df = pd.read_csv(infile, dtype={'Time': float, 'Sequence Number': int})
     df['Sequence Number'] = df['Sequence Number'] / MSS % SEQ_MOD
@@ -50,6 +52,7 @@ def sequence(infile, outfile, title=''):
     ack = df[df.Event == 'ack'].copy()
     ax = ack.plot(x='Time', y='Sequence Number', kind='scatter', marker='.', s=2, figsize=FIG_SIZE, ax=ax1)
     ax.set_xlim(-0.1, MAX_SEC)
+    ax.set_ylim(0, 60)
     ax.set_xlabel('Time')
     ax.set_ylabel('Sequence Number')
     plt.suptitle("")
