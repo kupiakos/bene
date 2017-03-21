@@ -10,7 +10,7 @@ plural() {
 
 simulate() {
     mkdir tmp 2>/dev/null
-    for type in '' reno; do
+    for type in '' ${2:+reno}; do
         ./transfer.py ${type:+-r} ${2:+-d $2} \
             internet-architecture.pdf tmp/sequence.csv tmp/cwnd.csv || exit
         ./tcp-plot.py tmp/sequence.csv tmp/cwnd.csv report/graphs/${type:=tahoe}-${1} \
