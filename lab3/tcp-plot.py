@@ -8,8 +8,10 @@ import pandas as pd
 plt.style.use('ggplot')
 pd.set_option('display.width', 1000)
 
-FIG_SIZE = (11, 5)
-MAX_SEC = 5
+SCALE = .75
+FIG_SIZE = (11 * SCALE, 5.6 * SCALE)
+CWND_FIG_SIZE = (8 * SCALE, 5.6 * SCALE)
+MAX_SEC = 6
 MSS = 1000
 SEQ_MOD = 60
 
@@ -19,19 +21,22 @@ def cwnd(infile, outfile, title=''):
     df = pd.read_csv(infile)
     df['Congestion Window'] /= MSS
     df['Threshold'] /= MSS
-    ax = df.plot(x="Time", y="Congestion Window", figsize=(8, 5))
-    # df.plot(x="Time", y="Threshold", figsize=(8, 5), ax=ax)
+    df['Time'] += 1
+    ax = df.plot(x="Time", y="Congestion Window", figsize=CWND_FIG_SIZE)
+    # df.plot(x="Time", y="Threshold", figsize=CWND_FIG_SIZE, ax=ax)
     # set the axes
     ax.set_xlabel('Time')
     ax.set_ylabel('Congestion Limit (MSS)')
+    ax.set_xlim(.9, MAX_SEC)
     plt.suptitle("")
     plt.title(title)
-    plt.savefig(outfile)
+    plt.savefig(outfile, bbox_inches='tight')
 
 def sequence(infile, outfile, title=''):
     print('Generating sequence graph...')
     plt.figure()
     df = pd.read_csv(infile, dtype={'Time': float, 'Sequence Number': int})
+    df['Time'] += 1
     df['Sequence Number'] = df['Sequence Number'] / MSS % SEQ_MOD
     # send
     send = df[df.Event == 'send'].copy()
@@ -45,19 +50,19 @@ def sequence(infile, outfile, title=''):
     # drop
     try:
         drop = df[df.Event == 'drop'].copy()
-        drop.plot(x='Time', y='Sequence Number', kind='scatter', marker='x', s=10, figsize=FIG_SIZE, ax=ax1)
+        drop.plot(x='Time', y='Sequence Number', kind='scatter', c='r', marker='x', s=10, figsize=FIG_SIZE, ax=ax1)
     except TypeError:
         pass
     # ack
     ack = df[df.Event == 'ack'].copy()
-    ax = ack.plot(x='Time', y='Sequence Number', kind='scatter', marker='.', s=2, figsize=FIG_SIZE, ax=ax1)
-    ax.set_xlim(-0.1, MAX_SEC)
-    ax.set_ylim(0, 60)
+    ax = ack.plot(x='Time', y='Sequence Number', kind='scatter', c='k', marker='.', s=2, figsize=FIG_SIZE, ax=ax1)
+    ax.set_xlim(.9, MAX_SEC)
+    ax.set_ylim(-1, 60)
     ax.set_xlabel('Time')
     ax.set_ylabel('Sequence Number')
     plt.suptitle("")
     plt.title(title)
-    plt.savefig(outfile, dpi=300)
+    plt.savefig(outfile, dpi=300, bbox_inches='tight')
 
 
 if __name__ == '__main__':
