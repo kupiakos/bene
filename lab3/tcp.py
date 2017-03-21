@@ -13,7 +13,7 @@ class TCP(Connection):
     """ A TCP connection between two hosts."""
 
     def __init__(self, transport, source_address, source_port,
-                 destination_address, destination_port, app=None, window=100000, mss=1000,
+                 destination_address, destination_port, app=None, window=1000000, mss=1000,
                  fast_retransmit=3, congestion_control=None):
         Connection.__init__(self, transport, source_address, source_port,
                             destination_address, destination_port, app)
@@ -33,7 +33,7 @@ class TCP(Connection):
         # retransmission timer
         self.timer = None
         # timeout duration in seconds
-        self.timeout = 1
+        self.timeout = 2
 
         # The number of duplicate ACKs to receive before we perform a fast retransmit (0 for no fast retransmit)
         self.fast_retransmit = fast_retransmit
