@@ -1,8 +1,8 @@
 from functools import partial
 
 from .ranges import range_merge, range_subtract, range_overlap, range_format
-from .sim import Sim
-from .tcppacket import TCPPacket
+from src.sim import Sim
+from src.tcppacket import TCPPacket
 
 
 class Transport(object):

@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
+import csv
 import sys
-from typing import io
+from collections import namedtuple
+from typing import io, Optional, MutableSet
 
 sys.path.append('..')
 
+from src.tcppacket import TCPPacket
 from src.sim import Sim
-from lab2.transport import Transport
-from lab2.nethelper import NetHelper
-from lab2.tcp import TCP
-from lab2.sniffer import PacketSniffer
+from lab3.congestion import TCPTahoe
+from lab3.nethelper import NetHelper
+from lab3.tcp import TCP
+from lab3.sniffer import PacketSniffer
 
 import argparse
 import io
+
+MSS = 1000
 
 
 class TransferTester:
@@ -31,10 +36,13 @@ class TransferTester:
             self.errors = True
 
     def check(self):
+        if not self.length == self.check_file.tell() == self.send_file.tell():
+            print('=== The file was not fully written ===')
+            self.errors = True
         if self.errors:
-            print(' === There were errors in processing ===')
+            print('=== There were errors in processing ===')
         else:
-            print(' === File transferred successfully ===')
+            print('=== File transferred successfully ===')
         self.send_file.close()
         self.check_file.close()
 
@@ -46,34 +54,68 @@ class TransferTester:
             Sim.scheduler.add(delay=0, event=data, handler=handler)
 
 
+class CongestionWindowPlotter(PacketSniffer):
+    SequenceEntry = namedtuple('SequenceEntry', ('time', 'sequence', 'event'))
+    CongestionEntry = namedtuple('CongestionEntry', ('time', 'cwnd', 'threshold'))
+
+    def __init__(self, tcp: TCP, drops: MutableSet[int]):
+        super().__init__(tcp.node, 'TCP', False)
+        self.tcp = tcp
+        self.drops = drops
+        self.packets = []
+        self.congestion = []
+
+    def add_entry(self, sequence: int, event: str):
+        self.packets.append(self.SequenceEntry(Sim.scheduler.current_time(), sequence, event))
+        self.congestion.append(self.CongestionEntry(
+            Sim.scheduler.current_time(),
+            self.tcp.congestion.max_outstanding,
+            getattr(self.tcp.congestion, 'threshold', None)))
+
+    def intercept_sent(self, packet: TCPPacket) -> Optional[TCPPacket]:
+        if packet.sequence in self.drops:
+            self.trace('Dropping packet %d' % packet.sequence)
+            self.drops.remove(packet.sequence)
+            self.add_entry(packet.sequence, 'drop')
+            return None
+        self.add_entry(packet.sequence, 'send')
+        return super().intercept_sent(packet)
+
+    def intercept_transmit(self, packet: TCPPacket) -> Optional[TCPPacket]:
+        if packet.body:
+            self.add_entry(packet.sequence, 'transmit')
+        return super().intercept_transmit(packet)
+
+    def intercept_received(self, packet: TCPPacket) -> Optional[TCPPacket]:
+        self.add_entry(packet.ack_number - MSS, 'ack')
+        return super().intercept_received(packet)
+
+    def save_sequence(self, dest_file: str):
+        print('=== Writing sequence capture to', dest_file, '===')
+        with open(dest_file, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Time', 'Sequence Number', 'Event'])
+            writer.writerows(self.packets)
+
+    def save_cwnd(self, dest_file: str):
+        print('=== Writing congestion capture to', dest_file, '===')
+        with open(dest_file, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Time', 'Congestion Window', 'Threshold'])
+            writer.writerows(self.congestion)
+
+
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        'infile',
-        type=str, default='internet-architecture.pdf', nargs='?',
-        help='file to test with')
+    parser.add_argument('infile', type=str, help='file to test with')
+    parser.add_argument('sequence_file', type=str, help='the sequence CSV file')
+    parser.add_argument('cwnd_file', type=str, help='the congestion window CSV file')
 
     parser.add_argument(
-        '-l', '--loss',
-        type=float, default=0.2,
-        help='random loss rate')
-
-    parser.add_argument(
-        '-w', '--window',
-        type=int, default=3000,
-        help='the window size')
-
-    parser.add_argument(
-        '-f', '--fast-retransmit',
-        type=int, default=3,
-        help='the number of duplicate ACKs for a fast retransmit. 0 to disable.'
-    )
-
-    parser.add_argument(
-        '-q', '--queue',
-        type=int, nargs='?',
-        help='the queue size, infinite by default'
+        '-d',
+        type=lambda s: set(map(int, s.split(','))), default=set(), dest='drops',
+        help='Drop the specified comma-separated sequence numbers'
     )
 
     args = parser.parse_args()
@@ -82,42 +124,31 @@ def main():
     Sim.scheduler.reset()
     Sim.set_debug('TransferTester')
     Sim.set_debug('TCP')
-    Sim.set_debug('Link')
+    Sim.set_debug('Congestion')
+    Sim.set_debug('CongestionWindowPlotter')
+    # Sim.set_debug('Link')
 
     # setup network
     net = NetHelper('two_nodes.txt')
-    net.loss(args.loss)
-    if args.queue is not None:
-        net.queue(args.queue)
 
     # setup routes
     n1 = net.get_node('n1')
     n2 = net.get_node('n2')
     net.forward_links((n1, n2))
 
-    # setup transport
-    t1 = Transport(n1)
-    t2 = Transport(n2)
-
-    capture = PacketSniffer(n2, 'TCP')
     # setup application
     tester = TransferTester(args.infile)
 
-    # setup connection
-    n1_n2 = net.resolve_dest_address(n1, n2)
-    n2_n1 = net.resolve_dest_address(n2, n1)
-
-    c1 = TCP(t1, n2_n1, 1, n1_n2, 1, tester, window=args.window, fast_retransmit=args.fast_retransmit)
-    c2 = TCP(t2, n1_n2, 1, n2_n1, 1, tester, window=args.window, fast_retransmit=args.fast_retransmit)
+    c1, c2 = TCP.connect(net, n1, n2, app=tester, congestion_control=TCPTahoe, mss=MSS, window=1e12)
+    capture = CongestionWindowPlotter(tcp=c1, drops=args.drops)
 
     tester.test(c1.send)
 
     # run the simulation
     Sim.scheduler.run()
     tester.check()
-    p = capture.packets[-1]
-    print('Transmission: %5f' % (8 * tester.length / (p.enter_queue + p.transmission_delay + p.propagation_delay)))
-    print('QueueDelay: %5f' % (sum(p.queueing_delay for p in capture.packets) / len(capture.packets)))
+    capture.save_sequence(args.sequence_file)
+    capture.save_cwnd(args.cwnd_file)
 
 
 if __name__ == '__main__':
