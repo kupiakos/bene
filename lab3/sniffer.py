@@ -59,8 +59,9 @@ class PacketSniffer:
 
         link.transmit = transmit
 
-    def trace(self, message):
-        Sim.trace(self.__class__.__name__, message)
+    @staticmethod
+    def trace(message):
+        Sim.trace('PacketSniffer', message)
 
     def intercept_sent(self, packet: Packet) -> Optional[Packet]:
         return packet

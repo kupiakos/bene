@@ -65,6 +65,10 @@ class CongestionWindowPlotter(PacketSniffer):
         self.packets = []
         self.congestion = []
 
+    @staticmethod
+    def trace_congestion(message):
+        Sim.trace('CongestionWindowPlotter', message=message)
+
     def add_entry(self, sequence: int, event: str):
         self.packets.append(self.SequenceEntry(Sim.scheduler.current_time(), sequence, event))
         self.congestion.append(self.CongestionEntry(
@@ -74,7 +78,7 @@ class CongestionWindowPlotter(PacketSniffer):
 
     def intercept_sent(self, packet: TCPPacket) -> Optional[TCPPacket]:
         if packet.sequence in self.drops:
-            self.trace('Dropping packet %d' % packet.sequence)
+            self.trace_congestion('Dropping packet %d' % packet.sequence)
             self.drops.remove(packet.sequence)
             self.add_entry(packet.sequence, 'drop')
             return None
@@ -127,7 +131,7 @@ def main():
     Sim.set_debug('TransferTester')
     Sim.set_debug('TCP')
     Sim.set_debug('Congestion')
-    # Sim.set_debug('CongestionWindowPlotter')
+    Sim.set_debug('CongestionWindowPlotter')
     # Sim.set_debug('Link')
 
     # setup network
