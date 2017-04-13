@@ -8,10 +8,10 @@ sys.path.append('..')
 
 from src.tcppacket import TCPPacket
 from src.sim import Sim
-from lab3.congestion import TCPTahoe, TCPReno
-from lab3.nethelper import NetHelper
-from lab3.tcp import TCP
-from lab3.sniffer import PacketSniffer
+from lab5.congestion import TCPTahoe, TCPReno
+from lab5.nethelper import NetHelper
+from lab5.tcp import TCP
+from lab5.sniffer import PacketSniffer
 
 import argparse
 import io

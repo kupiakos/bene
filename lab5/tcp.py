@@ -1,8 +1,8 @@
-from lab3 import congestion
-from lab3.buffer import SendBuffer, ReceiveBuffer
-from lab3.nethelper import NetHelper
-from lab3.ranges import range_format, range_subtract
-from lab3.transport import Transport
+from lab5 import congestion
+from lab5.buffer import SendBuffer, ReceiveBuffer
+from lab5.nethelper import NetHelper
+from lab5.ranges import range_format, range_subtract
+from lab5.transport import Transport
 from src.connection import Connection
 from src.node import Node
 from src.sim import Sim

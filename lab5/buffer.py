@@ -1,4 +1,4 @@
-from lab3.ranges import range_merge
+from lab5.ranges import range_merge
 
 
 class SendBuffer(object):
