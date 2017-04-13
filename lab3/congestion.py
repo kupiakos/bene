@@ -1,5 +1,5 @@
 import sys
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 
 from src.sim import Sim
 
@@ -20,11 +20,13 @@ class CongestionControl(metaclass=ABCMeta):
     def send_failed(self, num_bytes: int, dup_acks=0):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def max_outstanding(self) -> int:
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def skip_sending(self) -> int:
         pass
 
