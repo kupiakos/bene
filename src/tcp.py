@@ -1,12 +1,12 @@
+from networks.nethelper import NetHelper
 from src import congestion
 from src.buffer import SendBuffer, ReceiveBuffer
-from src.nethelper import NetHelper
-from src.ranges import range_format, range_subtract
-from src.transport import Transport
 from src.connection import Connection
 from src.node import Node
+from src.ranges import range_format, range_subtract
 from src.sim import Sim
 from src.tcppacket import TCPPacket
+from src.transport import Transport
 
 
 class TCP(Connection):

@@ -3,7 +3,7 @@ import unittest
 from typing import Dict
 
 from lab5.router import Router, DvrPacket
-from src.nethelper import NetHelper
+from networks.nethelper import NetHelper
 from src.node import Node
 from src.sim import Sim
 
