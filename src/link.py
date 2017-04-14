@@ -49,6 +49,7 @@ class Link(object):
             self.queue.append(packet)
 
     def transmit(self, packet):
+        packet.link = self.address
         packet.queueing_delay += Sim.scheduler.current_time() - packet.enter_queue
         delay = (8.0 * packet.length) / self.bandwidth
         packet.transmission_delay += delay
