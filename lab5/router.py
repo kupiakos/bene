@@ -1,6 +1,6 @@
 import math
 from collections import defaultdict
-from typing import Mapping, AbstractSet
+from typing import Mapping, AbstractSet, Optional
 
 from src.link import Link
 from src.node import Node
@@ -11,31 +11,31 @@ from src.sim import Sim
 class DvrPacket(Packet):
     def __init__(self,
                  src_hostname: str,
-                 distance_vector: Mapping[str, float],
-                 host_best_dest: Mapping[str, int],
-                 link_addresses: Mapping[str, AbstractSet[int]],
+                 distance_vector: Mapping[int, float],
+                 host_links: Mapping[str, AbstractSet[int]],
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.src_hostname = src_hostname
-        self.host_best_dest = host_best_dest
         self.distance_vector = distance_vector
-        self.link_addresses = link_addresses
+        self.host_links = host_links
 
 
 class Router:
     def __init__(self, node: Node):
         self.node = node
-        # Map dest host names to the currently known cost
+        # Map dest links to the currently known cost
         self.distance_vector = defaultdict(lambda: math.inf)
-        # Map dest host names to best known recv link on host reachable from here
-        self.host_best_dest = defaultdict(int)
-        # Map dest host names to the set of known links
-        self.link_addresses = defaultdict(set)
-        self.link_addresses[self.node.hostname] = {l.address for l in self.node.recv_links}
+        # A node knows the distance to its own link is 0
+        for recv_link in self.node.recv_links:
+            self.distance_vector[recv_link.address] = 0
+        # Map dest host names to the set of known receiving links
+        self.host_links = defaultdict(set)
+        self.host_links[self.node.hostname] = {l.address for l in self.node.recv_links}
         # dvr = distance vector routing
         self.node.add_protocol('dvr', self)
 
     def _link_cost(self, link: Link):
+        assert link.startpoint is self.node
         return 1
 
     def trace(self, message: str):
@@ -44,27 +44,37 @@ class Router:
     def send_packet(self, hostname: str):
         pass
 
+    def best_address(self, hostname: str) -> Optional[int]:
+        """Find the best known destination address for a given hostname, or None"""
+        addresses = self.host_links[hostname]
+        if not addresses:
+            return None
+        addr = min(addresses, key=lambda a: self.distance_vector[a])
+        if math.isinf(self.distance_vector[addr]):
+            return None
+        return addr
+
     def receive_packet(self, packet: DvrPacket):
+        # Our neighbor will only send vector data where it is the source
         src_hostname = packet.src_hostname
-        dest_link = self.node.get_link(src_hostname)
-        if dest_link is None:
+        forward_link = self.node.get_link(src_hostname)
+        if forward_link is None:
             self.trace('Could not find link for %s' % src_hostname)
             return
-        assert dest_link.startpoint.hostname == src_hostname
+        assert forward_link.endpoint.hostname == src_hostname
 
-        self.link_addresses[src_hostname].add(dest_link.address)
-        for dest_hostname, links in packet.link_addresses:
-            self.link_addresses[dest_hostname] |= links
+        # The neighbor we received this from has a known receiving link
+        self.host_links[src_hostname].add(forward_link.address)
+        # We also update our host links with each of the host links our neighbor knows
+        for dest_hostname, links in packet.host_links.items():
+            self.host_links[dest_hostname] |= links
 
-        # Check each vector entry
-        for dest_hostname, new_cost in packet.distance_vector:
-            new_cost += self._link_cost(dest_link)
-            cur_cost = self.distance_vector[dest_hostname]
+        # Check each vector entry from our neighbor
+        for dest_link, new_cost in packet.distance_vector.items():
+            new_cost += self._link_cost(forward_link)
+            cur_cost = self.distance_vector[dest_link]
             if new_cost < cur_cost:
                 # Update our distance vector for this new cost
-                self.distance_vector[dest_hostname] = new_cost
-                # Update the forwarding table for the new "best" link
-                best_dest = packet.host_best_dest[dest_hostname]
-                self.host_best_dest[dest_hostname] = best_dest
-                self.node.add_forwarding_entry(best_dest, dest_link)
+                self.distance_vector[dest_link] = new_cost
+                self.node.add_forwarding_entry(dest_link, forward_link)
 
