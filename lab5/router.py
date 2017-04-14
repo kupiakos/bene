@@ -14,6 +14,8 @@ class DvrPacket(Packet):
                  distance_vector: Mapping[int, float],
                  host_links: Mapping[str, AbstractSet[int]],
                  *args, **kwargs):
+        if 'protocol' not in kwargs:
+            kwargs['protocol'] = 'dvr'
         super().__init__(*args, **kwargs)
         self.src_hostname = src_hostname
         self.distance_vector = distance_vector
@@ -30,7 +32,7 @@ class Router:
             self.distance_vector[recv_link.address] = 0
         # Map dest host names to the set of known receiving links
         self.host_links = defaultdict(set)
-        self.host_links[self.node.hostname] = {l.address for l in self.node.recv_links}
+        self.host_links[self.hostname] = {l.address for l in self.node.recv_links}
         # dvr = distance vector routing
         self.node.add_protocol('dvr', self)
 
@@ -38,8 +40,12 @@ class Router:
         assert link.startpoint is self.node
         return 1
 
+    @property
+    def hostname(self) -> str:
+        return self.node.hostname
+
     def trace(self, message: str):
-        Sim.trace('router', message=message)
+        Sim.trace('router', message='%s: %s' % (self.hostname, message))
 
     def send_packet(self, hostname: str):
         pass
@@ -62,6 +68,7 @@ class Router:
             self.trace('Could not find link for %s' % src_hostname)
             return
         assert forward_link.endpoint.hostname == src_hostname
+        self.trace('Received dvr packet from %s - reply with %s' % (src_hostname, repr(forward_link)))
 
         # The neighbor we received this from has a known receiving link
         self.host_links[src_hostname].add(forward_link.address)
@@ -74,7 +81,17 @@ class Router:
             new_cost += self._link_cost(forward_link)
             cur_cost = self.distance_vector[dest_link]
             if new_cost < cur_cost:
+                self.trace('Update distance vector for %d from cost %f to %f using %s to forward' % (
+                    dest_link, cur_cost, new_cost, repr(forward_link)
+                ))
                 # Update our distance vector for this new cost
                 self.distance_vector[dest_link] = new_cost
                 self.node.add_forwarding_entry(dest_link, forward_link)
 
+    def notify_neighbors(self):
+        """Notify our neighbors about our distance vector"""
+        self.trace('Notifying neighbors of current info')
+        # Create a broadcast DvrPacket
+        p = DvrPacket(self.hostname, self.distance_vector, self.host_links,
+                      ttl=1, destination_address=0)
+        self.node.send_packet(p)
