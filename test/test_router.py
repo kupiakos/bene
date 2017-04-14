@@ -1,10 +1,9 @@
+import math
 import unittest
 from typing import Dict
 
-import math
-
-from lab5.nethelper import NetHelper
 from lab5.router import Router, DvrPacket
+from src.nethelper import NetHelper
 from src.node import Node
 from src.sim import Sim
 
@@ -143,10 +142,6 @@ class TestRouter(unittest.TestCase):
         self.assertIsNone(r.best_address('n13'))
         # Should be able to send to "localhost"
         self.assertIsNotNone(r.best_address('n1'))
-
-
-
-
 
 
 if __name__ == '__main__':

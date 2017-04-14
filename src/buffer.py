@@ -1,4 +1,4 @@
-from lab2.ranges import range_merge
+from src.ranges import range_merge
 
 
 class SendBuffer(object):
@@ -47,6 +47,12 @@ class SendBuffer(object):
         self.next_seq = self.next_seq + size
         return bytes(data), sequence
 
+    def skip(self, size):
+        """Ensure that the next result from get will skip at least the
+        first size bytes in the buffer."""
+        if self.next_seq < self.base_seq + size:
+            self.next_seq = self.base_seq + size
+
     def resend(self, size, reset=True):
         """ Get oldest data that is outstanding, so it can be
         resent. Return the data and the starting sequence number of
@@ -67,13 +73,14 @@ class SendBuffer(object):
             number. This sequence number represents the lowest
             sequence number that is not yet acked. In other words, the
             ACK is for all data less than but not equal to this
-            sequence number."""
+            sequence number. Return the number of ACKed bytes."""
         acked = sequence - self.base_seq
         self.buffer = self.buffer[acked:]
         self.base_seq = sequence
         # adjust next in case we slide past it
         if self.next_seq < self.base_seq:
             self.next_seq = self.base_seq
+        return acked
 
 
 class Chunk(object):

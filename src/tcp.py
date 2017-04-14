@@ -1,6 +1,10 @@
-from lab2.buffer import SendBuffer, ReceiveBuffer
-from lab2.ranges import range_format, range_subtract
+from src import congestion
+from src.buffer import SendBuffer, ReceiveBuffer
+from src.nethelper import NetHelper
+from src.ranges import range_format, range_subtract
+from src.transport import Transport
 from src.connection import Connection
+from src.node import Node
 from src.sim import Sim
 from src.tcppacket import TCPPacket
 
@@ -9,8 +13,8 @@ class TCP(Connection):
     """ A TCP connection between two hosts."""
 
     def __init__(self, transport, source_address, source_port,
-                 destination_address, destination_port, app=None, window=1000,
-                 fast_retransmit=3):
+                 destination_address, destination_port, app=None, window=1000000, mss=1000,
+                 fast_retransmit=3, congestion_control=None):
         Connection.__init__(self, transport, source_address, source_port,
                             destination_address, destination_port, app)
 
@@ -22,14 +26,14 @@ class TCP(Connection):
         # send buffer
         self.send_buffer = SendBuffer()
         # maximum segment size, in bytes
-        self.mss = 1000
+        self.mss = mss
         # largest sequence number that has been ACKed so far; represents
         # the next sequence number the client expects to receive
         self.sequence = 0
         # retransmission timer
         self.timer = None
         # timeout duration in seconds
-        self.timeout = 1
+        self.timeout = 2
 
         # The number of duplicate ACKs to receive before we perform a fast retransmit (0 for no fast retransmit)
         self.fast_retransmit = fast_retransmit
@@ -44,7 +48,26 @@ class TCP(Connection):
         # number not yet received
         self.ack = 0
 
-    def trace(self, message):
+        if congestion_control is None:
+            congestion_control = congestion.NoCongestionControl
+        self.congestion = congestion_control(mss=self.mss)
+
+    @classmethod
+    def connect(cls, net: NetHelper, n1: Node, n2: Node, *args, **kwargs):
+        # setup transport
+        t1 = Transport(n1)
+        t2 = Transport(n2)
+
+        # setup connection
+        n1_n2 = net.resolve_dest_address(n1, n2)
+        n2_n1 = net.resolve_dest_address(n2, n1)
+
+        c1 = cls(t1, n2_n1, 1, n1_n2, 1, *args, **kwargs)
+        c2 = cls(t2, n1_n2, 1, n2_n1, 1, *args, **kwargs)
+        return c1, c2
+
+    @staticmethod
+    def trace(message):
         """ Print debugging messages. """
         Sim.trace("TCP", message)
 
@@ -68,8 +91,10 @@ class TCP(Connection):
             self.node.hostname, self.send_buffer.base_seq, self.send_buffer.next_seq, self.send_buffer.last_seq
         ))
 
-    def send_one_segment(self):
+    def send_one_segment(self, resend=False):
+        self.send_buffer.skip(0 if resend else self.congestion.skip_sending)
         data_len = min(self.send_buffer.available,
+                       self.congestion.max_outstanding - self.send_buffer.outstanding,
                        self.window - self.send_buffer.outstanding, self.mss)
         if data_len <= 0:
             self.trace('%s cannot send more data' % self.node.hostname)
@@ -79,7 +104,7 @@ class TCP(Connection):
         return self.send_packet(data, seq)
 
     def send_all_allowed(self):
-        """Send all data that the current state (window) allows us to"""
+        """Send all data that the current state (window, congestion control) allows us to"""
         while self.send_one_segment() is not None: pass
 
     def send_packet(self, data, sequence):
@@ -105,8 +130,10 @@ class TCP(Connection):
         self.trace('%s (%d) received ACK from %d for %d' % (
             self.node.hostname, packet.destination_address, packet.source_address, packet.ack_number
         ))
-        self.send_buffer.slide(packet.ack_number)
-        if self.send_buffer.outstanding > 0:
+        acked = self.send_buffer.slide(packet.ack_number)
+        if acked > 0:
+            self.congestion.send_successful(acked)
+        if self.send_buffer.outstanding > 0 or self.congestion.skip_sending > 0:
             self.reset_timer()
         else:
             self.trace('%s cancel timer' % self.node.hostname)
@@ -118,9 +145,10 @@ class TCP(Connection):
                 self.trace('%s %d ACKs are duplicate' % (
                     self.node.hostname, self.duplicate_acks
                 ))
+            if excess >= 0:
+                self.congestion.send_failed(self.send_buffer.outstanding, dup_acks=self.duplicate_acks)
             if excess == 0:
                 self.retransmit(timer=False)
-            if excess >= 0:
                 return
         else:
             self.duplicate_acks = 0
@@ -131,18 +159,16 @@ class TCP(Connection):
         """ Retransmit data. """
         if timer:
             self.timer = None
-            self.trace("%s (%d) retransmission timer fired, sequence %d" % (
+            self.trace("%s (%d) TCP timeout fired, sequence %d" % (
                 self.node.hostname, self.source_address, self.sequence))
+            self.congestion.send_failed(self.send_buffer.outstanding)
         else:
             self.cancel_timer()
             self.trace('%s fast retransmit, sequence %d' % (
                 self.node.hostname, self.sequence
             ))
-        data, seq = self.send_buffer.resend(min(self.mss, self.window), True)
-        if len(data) == 0:
-            self.trace('%s no data to send for retransmit' % self.node.hostname)
-        else:
-            self.send_packet(data, seq)
+        self.send_buffer.resend(0, reset=True)
+        self.send_one_segment(resend=True)
 
     def reset_timer(self):
         if self.timer:
