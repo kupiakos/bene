@@ -22,6 +22,10 @@ class DvrPacket(Packet):
         self.host_links = host_links
 
 
+class RoutingError(ValueError):
+    pass
+
+
 class Router:
     def __init__(self, node: Node):
         self.node = node
