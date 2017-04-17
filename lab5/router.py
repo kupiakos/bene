@@ -51,8 +51,14 @@ class Router:
     def trace(self, message: str):
         Sim.trace('router', message='%s: %s' % (self.hostname, message))
 
-    def send_packet(self, hostname: str):
-        pass
+    def send_packet(self, hostname: str, packet: Packet):
+        """Send a data packet along on the best known route (and link) to a host"""
+        dest_addr = self.best_address(hostname)
+        if dest_addr is None:
+            raise RoutingError('Cannot find a route to %s' % hostname)
+        packet.destination_address = dest_addr
+        self.trace('Sending to host %s (address %d)' % (hostname, dest_addr))
+        self.node.send_packet(packet=packet)
 
     def best_address(self, hostname: str) -> Optional[int]:
         """Find the best known destination address for a given hostname, or None"""
