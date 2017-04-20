@@ -37,6 +37,7 @@ class Router:
         # Map dest host names to the set of known receiving links
         self.host_links = defaultdict(set)
         self.host_links[self.hostname] = {l.address for l in self.node.recv_links}
+        self._neighbor_timers = {}
         # dvr = distance vector routing
         self.node.add_protocol('dvr', self)
 
@@ -105,3 +106,11 @@ class Router:
         p = DvrPacket(self.hostname, self.distance_vector, self.host_links,
                       ttl=1, destination_address=0)
         self.node.send_packet(p)
+
+    def _neighbor_timeout(self, forward_link: int):
+        self.trace('Timeout for link %s' % (
+            next(l for l in self.node.links if l.address == forward_link)
+        ))
+        del self._neighbor_timers[forward_link]
+        assert forward_link in self.distance_vector
+        del self.distance_vector[forward_link]
