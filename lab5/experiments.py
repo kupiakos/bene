@@ -88,9 +88,24 @@ def test_row():
     Sim.scheduler.run_until(29)
 
 
+def test_big():
+    Sim.scheduler.reset()
+    Sim.set_debug('sniff')
+    # Sim.set_debug('router')
+    net = NetHelper('../networks/fifteen-nodes.txt')
+    report_links(net)
+    routers = {name: Router(node) for name, node in net.nodes.items()}
+    for node in net.nodes.values():
+        ReportSniffer(node, None)
+    # Wait for the DVR packets to propagate before testing packets
+    Sim.scheduler.add(5, routers, test_packets)
+    Sim.scheduler.run_until(29)
+
+
 def main():
-    test_row()
+    # test_row()
     # test_ring()
+    test_big()
 
 
 if __name__ == '__main__':

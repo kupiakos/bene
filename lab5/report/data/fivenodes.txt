@@ -1,0 +1,124 @@
+All links:
+Link<(1) n1 -> n2>
+Link<(2) n2 -> n1>
+Link<(3) n2 -> n3>
+Link<(4) n3 -> n2>
+Link<(5) n3 -> n4>
+Link<(6) n4 -> n3>
+Link<(7) n4 -> n5>
+Link<(8) n5 -> n4>
+0.002 dvr n1 -> n2 ({1: 1, 2: 0, 4: 1})
+0.002 dvr n3 -> n2 ({1: 1, 3: 0, 4: 1, 6: 0})
+0.002 dvr n3 -> n4 ({1: 1, 3: 0, 4: 1, 6: 0})
+0.002 dvr n5 -> n4 ({8: 1, 5: 1, 7: 0})
+0.002 dvr n4 -> n3 ({8: 0, 5: 0, 7: 1})
+0.002 dvr n4 -> n5 ({8: 0, 5: 0, 7: 1})
+0.002 dvr n2 -> n1 ({1: 0, 3: 1, 4: 0, 6: 1})
+0.002 dvr n2 -> n3 ({1: 0, 3: 1, 4: 0, 6: 1})
+0.002 dvr n3 -> n2 ({1: 1, 3: 0, 4: 1, 5: 1, 6: 0, 8: 1})
+0.002 dvr n3 -> n4 ({1: 1, 3: 0, 4: 1, 5: 1, 6: 0, 8: 1})
+0.002 dvr n4 -> n3 ({8: 0, 3: 1, 5: 0, 6: 1, 7: 1})
+0.002 dvr n4 -> n5 ({8: 0, 3: 1, 5: 0, 6: 1, 7: 1})
+0.002 dvr n2 -> n1 ({1: 0, 2: 1, 3: 1, 4: 0, 6: 1})
+0.002 dvr n2 -> n3 ({1: 0, 2: 1, 3: 1, 4: 0, 6: 1})
+0.003 dvr n4 -> n3 ({1: 2, 3: 1, 4: 2, 5: 0, 6: 1, 7: 1, 8: 0})
+0.003 dvr n4 -> n5 ({1: 2, 3: 1, 4: 2, 5: 0, 6: 1, 7: 1, 8: 0})
+0.003 dvr n3 -> n2 ({1: 1, 3: 0, 4: 1, 5: 1, 6: 0, 7: 2, 8: 1})
+0.003 dvr n3 -> n4 ({1: 1, 3: 0, 4: 1, 5: 1, 6: 0, 7: 2, 8: 1})
+0.003 dvr n1 -> n2 ({1: 1, 2: 0, 3: 2, 4: 1, 6: 2})
+0.003 dvr n2 -> n1 ({1: 0, 2: 1, 3: 1, 4: 0, 5: 2, 6: 1, 8: 2})
+0.003 dvr n2 -> n3 ({1: 0, 2: 1, 3: 1, 4: 0, 5: 2, 6: 1, 8: 2})
+0.003 dvr n5 -> n4 ({8: 1, 3: 2, 5: 1, 6: 2, 7: 0})
+0.003 dvr n3 -> n2 ({1: 1, 2: 2, 3: 0, 4: 1, 5: 1, 6: 0, 7: 2, 8: 1})
+0.003 dvr n3 -> n4 ({1: 1, 2: 2, 3: 0, 4: 1, 5: 1, 6: 0, 7: 2, 8: 1})
+0.004 dvr n5 -> n4 ({1: 3, 3: 2, 4: 3, 5: 1, 6: 2, 7: 0, 8: 1})
+0.004 dvr n2 -> n1 ({1: 0, 2: 1, 3: 1, 4: 0, 5: 2, 6: 1, 7: 3, 8: 2})
+0.004 dvr n2 -> n3 ({1: 0, 2: 1, 3: 1, 4: 0, 5: 2, 6: 1, 7: 3, 8: 2})
+0.004 dvr n1 -> n2 ({1: 1, 2: 0, 3: 2, 4: 1, 5: 3, 6: 2, 8: 3})
+0.004 dvr n4 -> n3 ({1: 2, 2: 3, 3: 1, 4: 2, 5: 0, 6: 1, 7: 1, 8: 0})
+0.004 dvr n4 -> n5 ({1: 2, 2: 3, 3: 1, 4: 2, 5: 0, 6: 1, 7: 1, 8: 0})
+0.005 dvr n1 -> n2 ({1: 1, 2: 0, 3: 2, 4: 1, 5: 3, 6: 2, 7: 4, 8: 3})
+0.005 dvr n5 -> n4 ({1: 3, 2: 4, 3: 2, 4: 3, 5: 1, 6: 2, 7: 0, 8: 1})
+                                        
+== Sending packet n1 -> n2 ==
+6.0 hop Link<(1) n1 -> n2>
+                                        
+== Sending packet n1 -> n3 ==
+7.0 hop Link<(1) n1 -> n2>
+7.001 hop Link<(3) n2 -> n3>
+                                        
+== Sending packet n1 -> n4 ==
+8.0 hop Link<(1) n1 -> n2>
+8.001 hop Link<(3) n2 -> n3>
+8.002 hop Link<(5) n3 -> n4>
+                                        
+== Sending packet n1 -> n5 ==
+9.0 hop Link<(1) n1 -> n2>
+9.001 hop Link<(3) n2 -> n3>
+9.002 hop Link<(5) n3 -> n4>
+9.003 hop Link<(7) n4 -> n5>
+                                        
+== Sending packet n2 -> n1 ==
+10.0 hop Link<(2) n2 -> n1>
+                                        
+== Sending packet n2 -> n3 ==
+11.0 hop Link<(3) n2 -> n3>
+                                        
+== Sending packet n2 -> n4 ==
+12.0 hop Link<(3) n2 -> n3>
+12.001 hop Link<(5) n3 -> n4>
+                                        
+== Sending packet n2 -> n5 ==
+13.0 hop Link<(3) n2 -> n3>
+13.001 hop Link<(5) n3 -> n4>
+13.002 hop Link<(7) n4 -> n5>
+                                        
+== Sending packet n3 -> n1 ==
+14.0 hop Link<(4) n3 -> n2>
+14.001 hop Link<(2) n2 -> n1>
+                                        
+== Sending packet n3 -> n2 ==
+15.0 hop Link<(4) n3 -> n2>
+                                        
+== Sending packet n3 -> n4 ==
+16.0 hop Link<(5) n3 -> n4>
+                                        
+== Sending packet n3 -> n5 ==
+17.0 hop Link<(5) n3 -> n4>
+17.001 hop Link<(7) n4 -> n5>
+                                        
+== Sending packet n4 -> n1 ==
+18.0 hop Link<(6) n4 -> n3>
+18.001 hop Link<(4) n3 -> n2>
+18.002 hop Link<(2) n2 -> n1>
+                                        
+== Sending packet n4 -> n2 ==
+19.0 hop Link<(6) n4 -> n3>
+19.001 hop Link<(4) n3 -> n2>
+                                        
+== Sending packet n4 -> n3 ==
+20.0 hop Link<(6) n4 -> n3>
+                                        
+== Sending packet n4 -> n5 ==
+21.0 hop Link<(7) n4 -> n5>
+                                        
+== Sending packet n5 -> n1 ==
+22.0 hop Link<(8) n5 -> n4>
+22.001 hop Link<(6) n4 -> n3>
+22.002 hop Link<(4) n3 -> n2>
+22.003 hop Link<(2) n2 -> n1>
+                                        
+== Sending packet n5 -> n2 ==
+23.0 hop Link<(8) n5 -> n4>
+23.001 hop Link<(6) n4 -> n3>
+23.002 hop Link<(4) n3 -> n2>
+                                        
+== Sending packet n5 -> n3 ==
+24.0 hop Link<(8) n5 -> n4>
+24.001 hop Link<(6) n4 -> n3>
+                                        
+== Sending packet n5 -> n4 ==
+25.0 hop Link<(8) n5 -> n4>
+
+Process finished with exit code 0
+

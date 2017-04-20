@@ -50,16 +50,30 @@ This distance vector is the currently known best-cost paths to each other node f
 Upon receiving another distance vector, a node will compare its current best-cost path with the best-cost path of its neighbor, plus the cost to get to the neighbor.
 If the best-cost path of its neighbor, plus the cost to get to the neighbor, is less than its current best-cost path to a destination, it will set its distance vector to this value and add an entry in the forwarding table to use that link to forward to the destination.
 
-\subsection{Implementation Details}
+Eventually, the best-cost information will be distributed throughout the network and every node will know the best cost to every other node, and through which link to forward.
 
+The distance vectors continue to be sent on a periodic basis, and when enough time passes without a node hearing from its neighbor, the link is declared dead and blacklisted.
+
+\subsection{Implementation Details}
+There's a bit of confusion about hostnames and addresses I've found.
+First, I've standardized it so that the links a node can receive on are that node's addresses.
+
+Next, in order to be able to address nodes that may have multiple addresses, information about which link addresses correspond to which hostnames also propagates throughout the network.
+When sending to an host, it looks at the costs to reach all of the links, known to be associated with that hostname, to determine which link to send to.
+
+Lastly, I've added a ``quick-update'', in which nodes receiving new routing information will immediately rebroadcast to their neighbors, rather than wait a period of time.
+This allows the initial startup time for full efficiency to be extremely low.
 
 \section{Experimentation}
 
 \subsection{Five Nodes}
+Here is the output from processing five nodes in a row.
+It is verified that each node can reach each other node, and the DVR packets can be seen being transferred at the beginning.
+\inputminted[]{text}{data/fivenodes.txt}
 
 \subsection{Ring of Five Nodes}
 
-Here is a snippet of the output for five nodes that highlights its effectiveness.
+Here is a snippet of the output for five nodes in a circle that highlights its effectiveness.
 \begin{minted}{text}
 0.002 dvr n3 -> n2 ({9: 1, 4: 0, 6: 1, 7: 0})
 0.002 dvr n3 -> n4 ({9: 1, 4: 0, 6: 1, 7: 0})
@@ -80,6 +94,10 @@ Here is a snippet of the output for five nodes that highlights its effectiveness
 14.001 hop Link<(3) n2 -> n1>
 \end{minted}
 
+\subsection{Dropping packets}
+However, I was not able to get packet-dropping to properly have each node update their routing table.
+At first, there was a routing loop.
+Then, the nodes were notified of when a link was down, but they did not necessarily know the whole new route to find.
 \begin{minted}{text}    
 == Sending packet n1 -> n2 ==
 96.0 hop Link<(1) n1 -> n2>
@@ -114,5 +132,32 @@ Here is a snippet of the output for five nodes that highlights its effectiveness
 \end{minted}
 
 \subsection{Fifteen Nodes}
+Like above, I could not get link loss to work properly, but lowest cost without loss is working just fine.
+The cycles are also being handled without any problems.
+Here are some example traces for routes:
+\begin{minted}[breaklines]{text}
+0.004 dvr n6 -> n1 ({1: 2, 2: 2, 3: 0, 4: 2, 5: 1, 6: 3, 7: 2, 9: 2, 10: 3, 12: 1, 13: 3, 14: 3, 15: 3, 16: 2, 19: 1, 20: 1, 21: 1, 22: 0, 23: 2, 24: 1, 25: 2, 26: 1, 27: 0, 28: 1, 29: 1, 30: 2, 31: 3, 32: 3, 33: 2, 34: 3})
+0.004 dvr n6 -> n7 ({1: 2, 2: 2, 3: 0, 4: 2, 5: 1, 6: 3, 7: 2, 9: 2, 10: 3, 12: 1, 13: 3, 14: 3, 15: 3, 16: 2, 19: 1, 20: 1, 21: 1, 22: 0, 23: 2, 24: 1, 25: 2, 26: 1, 27: 0, 28: 1, 29: 1, 30: 2, 31: 3, 32: 3, 33: 2, 34: 3})
+0
+...
+== Sending packet n1 -> n15 ==
+11.0 hop Link<(1) n1 -> n2>
+11.001 hop Link<(8) n2 -> n14>
+11.002 hop Link<(35) n14 -> n15>
+...
+== Sending packet n10 -> n12 ==
+22.0 hop Link<(29) n10 -> n1>
+22.001 hop Link<(2) n1 -> n4>
+22.002 hop Link<(13) n4 -> n5>
+22.003 hop Link<(17) n5 -> n12>
+\end{minted}
+
+\section{Conclusion}
+Overall, I would rate this experiment a partial success.
+I've managed to learn quite a bit about the challenges of Distance-Vector routing, how some information needs to be transmitted, and some needs to be left behind, and how difficult some of these edge cases are.
+
+I've tried implementing many solutions to solve the link-loss problem, spending many hours, but none of them have been able to be ironed out well enough to be 100\% effective, and so this report is given without it.
+
+Given the difficulty I've had, I'd imagine that this area is still a topic of heavy debate in the academic community.
 
 \end{document}
