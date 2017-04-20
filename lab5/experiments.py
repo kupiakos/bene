@@ -44,6 +44,7 @@ def test_packets(routers):
                              Packet(ident=ident, protocol='trace'), ident)
             ident += 1
 
+
 def report_links(net: NetHelper):
     links = {
         l.address: l for node in net.nodes.values()
@@ -54,7 +55,7 @@ def report_links(net: NetHelper):
         print(links[addr])
 
 
-def test_line():
+def test_ring():
     Sim.scheduler.reset()
     Sim.set_debug('sniff')
     # Sim.set_debug('router')
@@ -73,8 +74,23 @@ def test_line():
     Sim.scheduler.run_until(119)
 
 
+def test_row():
+    Sim.scheduler.reset()
+    Sim.set_debug('sniff')
+    # Sim.set_debug('router')
+    net = NetHelper('../networks/five-row.txt')
+    report_links(net)
+    routers = {name: Router(node) for name, node in net.nodes.items()}
+    for node in net.nodes.values():
+        ReportSniffer(node, None)
+    # Wait for the DVR packets to propagate before testing packets
+    Sim.scheduler.add(5, routers, test_packets)
+    Sim.scheduler.run_until(29)
+
+
 def main():
-    test_line()
+    test_row()
+    # test_ring()
 
 
 if __name__ == '__main__':
