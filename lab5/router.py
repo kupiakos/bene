@@ -27,8 +27,10 @@ class RoutingError(ValueError):
 
 
 class Router:
-    def __init__(self, node: Node):
+    def __init__(self, node: Node, send_rate=30, link_timeout=90):
         self.node = node
+        self.send_rate = send_rate
+        self.link_timeout = link_timeout
         # Map dest links to the currently known cost
         self.distance_vector = defaultdict(lambda: math.inf)
         # A node knows the distance to its own link is 0
@@ -37,6 +39,8 @@ class Router:
         # Map dest host names to the set of known receiving links
         self.host_links = defaultdict(set)
         self.host_links[self.hostname] = {l.address for l in self.node.recv_links}
+        self._transmit_timer = Sim.scheduler.add(
+            delay=self.send_rate, event=None, handler=self.notify_neighbors)
         self._neighbor_timers = {}
         # dvr = distance vector routing
         self.node.add_protocol('dvr', self)
@@ -73,6 +77,7 @@ class Router:
 
     def receive_packet(self, packet: DvrPacket):
         # Our neighbor will only send vector data where it is the source
+        new_data = False
         src_hostname = packet.src_hostname
         forward_link = self.node.get_link(src_hostname)
         if forward_link is None:
@@ -80,12 +85,19 @@ class Router:
             return
         assert forward_link.endpoint.hostname == src_hostname
         self.trace('Received dvr packet from %s - reply with %s' % (src_hostname, repr(forward_link)))
+        self._reset_neighbor(forward_link.address)
 
+        if forward_link.address not in self.host_links[src_hostname]:
+            new_data = True
         # The neighbor we received this from has a known receiving link
         self.host_links[src_hostname].add(forward_link.address)
         # We also update our host links with each of the host links our neighbor knows
         for dest_hostname, links in packet.host_links.items():
-            self.host_links[dest_hostname] |= links
+            known = self.host_links[dest_hostname]
+            l = len(known)
+            known |= links
+            if l < len(known):
+                new_data = True
 
         # Check each vector entry from our neighbor
         for dest_link, new_cost in packet.distance_vector.items():
@@ -95,17 +107,33 @@ class Router:
                 self.trace('Update distance vector for %d from cost %f to %f using %s to forward' % (
                     dest_link, cur_cost, new_cost, repr(forward_link)
                 ))
+                new_data = True
                 # Update our distance vector for this new cost
                 self.distance_vector[dest_link] = new_cost
                 self.node.add_forwarding_entry(dest_link, forward_link)
 
-    def notify_neighbors(self):
+        if new_data:
+            self.trace('New data detected in transmission, notify immediately')
+            self.notify_neighbors()
+
+    def notify_neighbors(self, _=None):
         """Notify our neighbors about our distance vector"""
+        if self._transmit_timer is not None:
+            Sim.scheduler.cancel(self._transmit_timer)
+        self._transmit_timer = Sim.scheduler.add(
+            delay=self.send_rate, event=None, handler=self.notify_neighbors)
+
         self.trace('Notifying neighbors of current info')
         # Create a broadcast DvrPacket
         p = DvrPacket(self.hostname, self.distance_vector, self.host_links,
                       ttl=1, destination_address=0)
         self.node.send_packet(p)
+
+    def _reset_neighbor(self, forward_link: int):
+        if forward_link in self._neighbor_timers:
+            Sim.scheduler.cancel(self._neighbor_timers[forward_link])
+        self._neighbor_timers[forward_link] = Sim.scheduler.add(
+            delay=self.link_timeout, event=forward_link, handler=self._neighbor_timeout)
 
     def _neighbor_timeout(self, forward_link: int):
         self.trace('Timeout for link %s' % (
@@ -114,3 +142,4 @@ class Router:
         del self._neighbor_timers[forward_link]
         assert forward_link in self.distance_vector
         del self.distance_vector[forward_link]
+        self.notify_neighbors()
