@@ -2,6 +2,10 @@ import itertools
 import sched
 
 
+class _KillScheduler(Exception):
+    pass
+
+
 class Scheduler(object):
     def __init__(self):
         self.current = 0
@@ -33,3 +37,14 @@ class Scheduler(object):
 
     def run(self):
         self.scheduler.run()
+
+    def run_until(self, delay):
+        self.scheduler.enter(delay, next(self.count), self._kill)
+        try:
+            self.run()
+        except _KillScheduler:
+            self.reset()
+
+    @staticmethod
+    def _kill():
+        raise _KillScheduler()

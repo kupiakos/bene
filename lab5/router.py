@@ -39,11 +39,11 @@ class Router:
         # Map dest host names to the set of known receiving links
         self.host_links = defaultdict(set)
         self.host_links[self.hostname] = {l.address for l in self.node.recv_links}
-        self._transmit_timer = Sim.scheduler.add(
-            delay=self.send_rate, event=None, handler=self.notify_neighbors)
+        self._transmit_timer = None
         self._neighbor_timers = {}
         # dvr = distance vector routing
         self.node.add_protocol('dvr', self)
+        self.notify_neighbors()
 
     def _link_cost(self, link: Link):
         assert link.startpoint is self.node
@@ -114,14 +114,17 @@ class Router:
 
         if new_data:
             self.trace('New data detected in transmission, notify immediately')
+            self.trace('Full distance vector: %s' % dict(self.distance_vector))
+            self.trace('Forwarding table: %s' % dict(self.node.forwarding_table))
+            self.trace('Host links: %s' % dict(self.host_links))
             self.notify_neighbors()
 
-    def notify_neighbors(self, _=None):
+    def notify_neighbors(self, timeout=False, force=None):
         """Notify our neighbors about our distance vector"""
-        if self._transmit_timer is not None:
+        if self._transmit_timer is not None and not timeout:
             Sim.scheduler.cancel(self._transmit_timer)
         self._transmit_timer = Sim.scheduler.add(
-            delay=self.send_rate, event=None, handler=self.notify_neighbors)
+            delay=self.send_rate, event=True, handler=self.notify_neighbors)
 
         self.trace('Notifying neighbors of current info')
         # Create a broadcast DvrPacket

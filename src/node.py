@@ -72,8 +72,12 @@ class Node(object):
         if packet.created is None:
             packet.created = Sim.scheduler.current_time()
 
-        # forward the packet
-        self.forward_packet(packet)
+        # Check for pinging self
+        if any(link.address == packet.destination_address for link in self.recv_links):
+            self.receive_packet(packet)
+        else:
+            # forward the packet
+            self.forward_packet(packet)
 
     def receive_packet(self, packet):
         # handle broadcast packets
