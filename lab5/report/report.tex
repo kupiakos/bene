@@ -38,15 +38,32 @@
 \maketitle
 
 \section{Introduction}
-Routing is necessary for any large network to function.
+Routing is necessary for any large network of interconnected computers to function efficiently.
+There are many protocols that can be used to coordinate costs of sending from one node to the next; however, this lab will focus on the distance-vector algorithm.
 
+\section{Distance-Vector Algorithm}
+The distance-vector algorithm is a decentralized algorithm for computing best-cost paths from each node to each other node.
+Each node starts by knowing the costs to its own neighbors.
+Then, at determined intervals, each node sends a \textit{distance vector} to each of its neighbors.
+This distance vector is the currently known best-cost paths to each other node from that node.
+
+Upon receiving another distance vector, a node will compare its current best-cost path with the best-cost path of its neighbor, plus the cost to get to the neighbor.
+If the best-cost path of its neighbor, plus the cost to get to the neighbor, is less than its current best-cost path to a destination, it will set its distance vector to this value and add an entry in the forwarding table to use that link to forward to the destination.
+
+\subsection{Implementation Details}
+
+
+\section{Experimentation}
+
+\subsection{Five Nodes}
+
+\subsection{Ring of Five Nodes}
+
+Here is a snippet of the output for five nodes that highlights its effectiveness.
 \begin{minted}{text}
 0.002 dvr n3 -> n2 ({9: 1, 4: 0, 6: 1, 7: 0})
 0.002 dvr n3 -> n4 ({9: 1, 4: 0, 6: 1, 7: 0})
-                                        
-...
-10.0 hop Link<(3) n2 -> n1>
-                                        
+                                     
 == Sending packet n2 -> n3 ==
 11.0 hop Link<(4) n2 -> n3>
                                         
@@ -61,14 +78,9 @@ Routing is necessary for any large network to function.
 == Sending packet n3 -> n1 ==
 14.0 hop Link<(5) n3 -> n2>
 14.001 hop Link<(3) n2 -> n1>
-...
+\end{minted}
 
-30.003 dvr n5 -> n4 ({1: 2, 2: 0, 3: 1, 4: 2, 5: 2, 6: 1, 7: 2, 8: 0, 9: 1, 10: 1})
-30.003 dvr n4 -> n3 ({1: 2, 2: 1, 3: 2, 4: 1, 5: 2, 6: 0, 7: 1, 8: 1, 9: 0, 10: 2})
-...
-90.005 dvr n2 -> n1 ({1: 0, 2: 4, 3: 1, 4: 1, 5: 0, 6: 2, 7: 1, 8: 2, 9: 2, 10: 1})
-90.005 dvr n2 -> n3 ({1: 0, 2: 4, 3: 1, 4: 1, 5: 0, 6: 2, 7: 1, 8: 2, 9: 2, 10: 1})
-                                        
+\begin{minted}{text}    
 == Sending packet n1 -> n2 ==
 96.0 hop Link<(1) n1 -> n2>
                                         
@@ -85,45 +97,8 @@ Routing is necessary for any large network to function.
 == Sending packet n2 -> n1 ==
 100.0 hop Link<(3) n2 -> n1>
                                         
-== Sending packet n2 -> n3 ==
-101.0 hop Link<(4) n2 -> n3>
-                                        
-== Sending packet n2 -> n4 ==
-102.0 hop Link<(4) n2 -> n3>
-102.001 hop Link<(6) n3 -> n4>
-                                        
-== Sending packet n2 -> n5 ==
-103.0 hop Link<(3) n2 -> n1>
-103.001 hop Link<(3) n2 -> n1>
-                                        
-== Sending packet n3 -> n1 ==
-104.0 hop Link<(5) n3 -> n2>
-104.001 hop Link<(3) n2 -> n1>
-                                        
-== Sending packet n3 -> n2 ==
-105.0 hop Link<(5) n3 -> n2>
-                                        
-== Sending packet n3 -> n4 ==
-106.0 hop Link<(6) n3 -> n4>
-                                        
-== Sending packet n3 -> n5 ==
-107.0 hop Link<(6) n3 -> n4>
-107.001 hop Link<(8) n4 -> n5>
-                                        
-== Sending packet n4 -> n1 ==
-108.0 hop Link<(8) n4 -> n5>
-108.001 hop Link<(8) n4 -> n5>
-                                        
-== Sending packet n4 -> n2 ==
-109.0 hop Link<(7) n4 -> n3>
-109.001 hop Link<(5) n3 -> n2>
-                                        
-== Sending packet n4 -> n3 ==
-110.0 hop Link<(7) n4 -> n3>
-                                        
-== Sending packet n4 -> n5 ==
-111.0 hop Link<(8) n4 -> n5>
-                                        
+...
+    
 == Sending packet n5 -> n1 ==
 112.0 hop None
                                         
@@ -137,5 +112,7 @@ Routing is necessary for any large network to function.
 == Sending packet n5 -> n4 ==
 115.0 hop Link<(9) n5 -> n4>
 \end{minted}
+
+\subsection{Fifteen Nodes}
 
 \end{document}

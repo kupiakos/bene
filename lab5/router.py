@@ -13,6 +13,7 @@ class DvrPacket(Packet):
                  src_hostname: str,
                  distance_vector: Mapping[int, float],
                  host_links: Mapping[str, AbstractSet[int]],
+                 force_update: Mapping[int, float]=None,
                  *args, **kwargs):
         if 'protocol' not in kwargs:
             kwargs['protocol'] = 'dvr'
@@ -20,6 +21,8 @@ class DvrPacket(Packet):
         self.src_hostname = src_hostname
         self.distance_vector = distance_vector
         self.host_links = host_links
+        self.force_update = {} if force_update is None else force_update
+        assert self.force_update is not None
 
 
 class RoutingError(ValueError):
@@ -87,6 +90,13 @@ class Router:
         self.trace('Received dvr packet from %s - reply with %s' % (src_hostname, repr(forward_link)))
         self._reset_neighbor(forward_link.address)
 
+        # for dest_link, new_cost in packet.force_update.items():
+        #     new_data = True
+        #     new_cost += self._link_cost(forward_link)
+        #     if self.node.forwarding_table[dest_link] == forward_link.address:
+        #         self.trace('Forcing ')
+        #         self.distance_vector[dest_link] = new_cost
+
         if forward_link.address not in self.host_links[src_hostname]:
             new_data = True
         # The neighbor we received this from has a known receiving link
@@ -103,14 +113,21 @@ class Router:
         for dest_link, new_cost in packet.distance_vector.items():
             new_cost += self._link_cost(forward_link)
             cur_cost = self.distance_vector[dest_link]
-            if new_cost < cur_cost:
+            cur_forward = self.node.forwarding_table[dest_link].address if dest_link in self.node.forwarding_table else -1
+            if math.isinf(new_cost):
+                self.distance_vector[dest_link] = math.inf
+            if new_cost < cur_cost: # or (new_cost != cur_cost and cur_forward == forward_link.address):
                 self.trace('Update distance vector for %d from cost %f to %f using %s to forward' % (
                     dest_link, cur_cost, new_cost, repr(forward_link)
                 ))
                 new_data = True
                 # Update our distance vector for this new cost
-                self.distance_vector[dest_link] = new_cost
-                self.node.add_forwarding_entry(dest_link, forward_link)
+                if new_cost < cur_cost:
+                    self.distance_vector[dest_link] = new_cost
+                    self.node.add_forwarding_entry(dest_link, forward_link)
+                else:
+                    self.distance_vector[dest_link] = math.inf
+                    del self.node.forwarding_table[dest_link]
 
         if new_data:
             self.trace('New data detected in transmission, notify immediately')
@@ -139,10 +156,10 @@ class Router:
             delay=self.link_timeout, event=forward_link, handler=self._neighbor_timeout)
 
     def _neighbor_timeout(self, forward_link: int):
-        self.trace('Timeout for link %s' % (
-            next(l for l in self.node.links if l.address == forward_link)
-        ))
+        link = next(l for l in self.node.links if l.address == forward_link)
+        self.trace('Timeout for link %s' % link)
         del self._neighbor_timers[forward_link]
         assert forward_link in self.distance_vector
-        del self.distance_vector[forward_link]
+        self.distance_vector[forward_link] = math.inf
+        self.host_links[link.endpoint.hostname].remove(forward_link)
         self.notify_neighbors()

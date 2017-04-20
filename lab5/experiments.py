@@ -57,7 +57,7 @@ def report_links(net: NetHelper):
 def test_line():
     Sim.scheduler.reset()
     Sim.set_debug('sniff')
-    Sim.set_debug('router')
+    # Sim.set_debug('router')
     net = NetHelper('../networks/five-ring.txt')
     report_links(net)
     routers = {name: Router(node) for name, node in net.nodes.items()}
